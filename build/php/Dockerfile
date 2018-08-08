@@ -20,7 +20,13 @@ RUN apt-get update && apt-get install -my \
   zip \
   php-apcu \
   php-redis \
-  php-opcache
+  php-opcache \
+  php-pear \
+  php7.2-dev \
+  gcc \
+  g++ \
+  make
+
 RUN mkdir /run/php
 ADD conf/www.conf /etc/php/7.2/fpm/pool.d/www.conf
 ADD conf/php-fpm.conf /etc/php/7.2/fpm/php-fpm.conf
@@ -29,7 +35,10 @@ RUN php composer-setup.php
 RUN php -r "unlink('composer-setup.php');"
 RUN mv composer.phar /usr/local/bin/composer
 RUN chmod +x /usr/local/bin/composer
-RUN ln -snf /usr/share/zoneinfo/Europe/Lisbon /etc/localtime
+
+COPY ext/ssdeep.sh /tmp/ssdeep.sh
+RUN chmod +x /tmp/ssdeep.sh
+RUN /tmp/ssdeep.sh
 
 WORKDIR /var/www/html/symfony
 
