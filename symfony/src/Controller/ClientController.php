@@ -5,7 +5,7 @@ namespace App\Controller;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 
-class TestController extends Controller
+class ClientController extends Controller
 {
     /**
      * @Route("/test", name="test")
@@ -41,5 +41,9 @@ class TestController extends Controller
                 $match14,
             ],
         ]);
+    }
+
+    public function generateDb(){
+
     }
 }

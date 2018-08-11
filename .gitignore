@@ -9,3 +9,6 @@
 ###> symfony/web-server-bundle ###
 /symfony/.web-server-pid
 ###< symfony/web-server-bundle ###
+
+/mysql
+/logs

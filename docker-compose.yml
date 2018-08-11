@@ -21,11 +21,12 @@ services:
     - ./symfony:/var/www/html/symfony:cached
     - ./logs:/var/log/nginx
   db:
-    image: mysql/mysql-server:latest
+    image: mysql/mysql-server:5.6
     environment:
-    - MYSQL_DATABASE=${MYSQL_DATABASE}
-    - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-    - MYSQL_ROOT_HOST=${MYSQL_ROOT_HOST}
+    - MYSQL_DATABASE=FuzzyDuplicates
+    - MYSQL_ROOT_PASSWORD=RootPassword123
+    - MYSQL_USER=FuzzerUser
+    - MYSQL_PASSWORD=FuzzerPassword123
     ports:
     - '3307:3306'
     volumes:

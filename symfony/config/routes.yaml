@@ -1,4 +1,7 @@
 index:
     path: /test
-    controller: App\Controller\TestController::index
+    controller: App\Controller\ClientController::index
 
+generateDb:
+    path: /generateDb
+    controller: App\Controller\ClientController::generateDb
