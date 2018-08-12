@@ -19,6 +19,14 @@ class ClientRepository extends ServiceEntityRepository
         parent::__construct($registry, Client::class);
     }
 
+    public function clearClients(){
+        $conn = $this->getEntityManager()->getConnection();
+
+        $sql = 'DELETE FROM client';
+        $stmt = $conn->prepare($sql);
+        $stmt->execute();
+    }
+
 //    /**
 //     * @return Client[] Returns an array of Client objects
 //     */
