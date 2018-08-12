@@ -40,7 +40,15 @@ COPY ext/ssdeep.sh /tmp/ssdeep.sh
 RUN chmod +x /tmp/ssdeep.sh
 RUN /tmp/ssdeep.sh
 
+RUN mkdir -p /var/www/html/symfony
+RUN chown -R www-data:www-data /var/www/html/symfony
+
 WORKDIR /var/www/html/symfony
+
+# uncomment for code in container
+# COPY ../symfony .
+# RUN COMPOSER_ALLOW_SUPERUSER=1 composer install
+# RUN COMPOSER_ALLOW_SUPERUSER=1 composer dump-autoload
 
 EXPOSE 9000
 
