@@ -22,9 +22,20 @@ class ClientRepository extends ServiceEntityRepository
     public function clearClients(){
         $conn = $this->getEntityManager()->getConnection();
 
-        $sql = 'DELETE FROM client';
+        $sql = 'TRUNCATE TABLE client';
         $stmt = $conn->prepare($sql);
         $stmt->execute();
+    }
+
+    public function getFirstN(int $count){
+        $dql = '
+          SELECT c 
+          FROM App\Entity\Client c 
+          ORDER BY c.id ASC';
+        $query = $this->getEntityManager()->createQuery($dql);
+        $query->setMaxResults($count);
+
+        return $query->getResult();
     }
 
 //    /**

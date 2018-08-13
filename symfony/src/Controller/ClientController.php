@@ -7,10 +7,21 @@ use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
+use Psr\Log\LoggerInterface;
 use App\Entity;
 
 class ClientController extends Controller
 {
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
+
+    public function __construct(LoggerInterface $logger)
+    {
+        $this->logger = $logger;
+    }
+
     /**
      * @Route("/test", name="test")
      */
@@ -56,9 +67,9 @@ class ClientController extends Controller
         $totalCount = $request->get("clients") ?? 10000000;
         $duplicatesCount = $request->get("intendedDuplicates") ?? 100;
 
-        $this->generateClients($doctrine, $totalCount, $duplicatesCount, $names);
+        $result = $this->generateClients($doctrine, $totalCount, $duplicatesCount, $names);
 
-        return $this->json($names);
+        return $this->json($result);
     }
 
     private function getNames(){
@@ -98,11 +109,13 @@ class ClientController extends Controller
     {
         $em = $doctrine->getManager();
 
+        $em->getConnection()->getConfiguration()->setSQLLogger(null);
+
         $fairCount = $totalCount - $duplicatesCount;
         $startBirthDate = DateTime::createFromFormat('d/m/Y', '1/1/1971');
         $endBirthDate = DateTime::createFromFormat('d/m/Y', '1/12/2000');
 
-        $batchSize = 5000;
+        $batchSize = 500;
 
         for ($i = 0; $i < $fairCount; $i++){
             $sexSelector = rand(1, 100) > 50 ? "male" : "female";
@@ -121,15 +134,124 @@ class ClientController extends Controller
 
             $em->persist($client);
 
+            $tempRecords[] = $client;
+
             if (($i % $batchSize) === 0) {
                 $em->flush();
-                $em->clear();
-                // gc_collect_cycles();
+
+                foreach ($tempRecords as $record){
+                    $em->detach($record);
+                }
+
+                $tempRecords = null;
+
+                gc_enable();
+                gc_collect_cycles();
             }
         }
 
         $em->flush();
         $em->clear();
+
+
+        $letters = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
+        $lettersCount = strlen($letters);
+        $repo = $doctrine->getRepository(Entity\Client::class);
+        $origins = $repo->getFirstN($duplicatesCount);
+        $hist = [];
+
+        foreach ($origins as $origin){
+            $mutationLevel = rand(1, 100);
+
+            $passportNumber = intval($origin->getPassportNumber());
+            if($mutationLevel > 90){
+                $passportNumber = intval($origin->getPassportNumber()) + pow(rand(1,9), rand(0, 5));
+
+                if($passportNumber > 999999){
+                    $passportNumber = $passportNumber - 1000000;
+                }
+            }
+
+            $passportSeries = intval($origin->getPassportSeries());
+            if($mutationLevel > 80){
+                $passportSeries = intval($origin->getPassportSeries()) + pow(rand(1,9), rand(0, 3));
+
+                if($passportSeries > 9999){
+                    $passportSeries = $passportSeries - 10000;
+                }
+            }
+
+            $birthDate = $origin->getBirthDate();
+            if($mutationLevel > 50) {
+                $dateFactor = rand(1,3);
+
+                switch ($dateFactor){
+                    case 1:
+                        $intervalSpec = "P" . rand(1,3) . "Y";
+                        break;
+
+                    case 2:
+                        $intervalSpec = "P" . rand(1,12) . "M";
+                        break;
+
+                    case 3:
+                        $intervalSpec = "P" . rand(1,30) . "D";
+                        break;
+
+                    default:
+                        $intervalSpec = "P1D";
+                }
+
+                $birthDate = $origin->getBirthDate()->add(new \DateInterval($intervalSpec));
+            }
+
+            $originalFullName = $origin->getFullName();
+            $charsToReplaceCount = rand(1, 5);
+            $nameLength = strlen($originalFullName);
+            $positions = [];
+
+            do {
+                $newPosition = rand(0, $nameLength - 1);
+
+                if(substr($originalFullName, $newPosition, 1) === " ") {
+                    continue;
+                }
+
+                $alreadyHavePosition = false;
+
+                foreach ($positions as $p){
+                    if($p === $newPosition){
+                        $alreadyHavePosition = true;
+                        break;
+                    }
+                }
+
+                if(!$alreadyHavePosition){
+                    $positions[] = $newPosition;
+                }
+            }
+            while (count($positions) < $charsToReplaceCount);
+
+            $fullName = $origin->getFullName();
+            foreach ($positions as $p){
+                $hist[] = $fullName;
+                $fullName = substr_replace($fullName, substr($letters, rand(0, $lettersCount - 1), 1), $p, 1);
+                $hist[] = $fullName;
+            }
+
+            $client = new Entity\Client();
+            $client->setFullName($fullName);
+            $client->setBirthDate($birthDate);
+            $client->setPassportSeries(sprintf("%'.04d", $passportSeries));
+            $client->setPassportNumber(sprintf("%'.06d", $passportNumber));
+
+            $em->persist($client);
+        }
+
+        $em->flush();
+        $em->clear();
+
+        return $hist;
     }
 
     private function randomDateInRange(DateTime $start, DateTime $end) {

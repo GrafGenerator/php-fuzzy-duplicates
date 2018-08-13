@@ -8,8 +8,8 @@ db_url=$(echo "mysql://FuzzerUser:FuzzerPassword123@${db_ip}:3306/FuzzyDuplicate
 
 pushd $(pwd)
 cd ./symfony
-composer install
-composer dump-autoload
+php composer.phar install
+php composer.phar dump-autoload
 
 export DATABASE_URL=${db_url}
 
