@@ -160,16 +160,12 @@ class ClientController extends Controller
         $origins = $repo->getFirstN($duplicatesCount);
         $hist = [];
         $hist[] = $letters;
-        $hist[] = strlen($letters);
-        $hist[] = mb_strlen($letters);
-        $hist[] = mb_substr($letters, 1, 1);
-        $hist[] = substr_replace($letters, "ф", 26, 2);
 
         foreach ($origins as $origin){
             $mutationLevel = rand(1, 100);
 
             $passportNumber = intval($origin->getPassportNumber());
-            if($mutationLevel > 90){
+            if($mutationLevel > 95){
                 $passportNumber = intval($origin->getPassportNumber()) + pow(rand(1,9), rand(0, 5));
 
                 if($passportNumber > 999999){
@@ -178,7 +174,7 @@ class ClientController extends Controller
             }
 
             $passportSeries = intval($origin->getPassportSeries());
-            if($mutationLevel > 80){
+            if($mutationLevel > 90){
                 $passportSeries = intval($origin->getPassportSeries()) + pow(rand(1,9), rand(0, 3));
 
                 if($passportSeries > 9999){
@@ -187,7 +183,7 @@ class ClientController extends Controller
             }
 
             $birthDate = $origin->getBirthDate();
-            if($mutationLevel > 50) {
+            if($mutationLevel > 70) {
                 $dateFactor = rand(1,3);
 
                 switch ($dateFactor){
@@ -210,8 +206,8 @@ class ClientController extends Controller
                 $birthDate = $origin->getBirthDate()->add(new \DateInterval($intervalSpec));
             }
 
-            $originalFullName = mb_convert_encoding(str_replace($origin->getFullName(), "  ", " "), "UTF-8");
-            $charsToReplaceCount = rand(1, 5);
+            $originalFullName = mb_convert_encoding($origin->getFullName(), "UTF-8");
+            $charsToReplaceCount = rand(1, 3);
             $nameLength = mb_strlen($originalFullName);
             $positions = [];
 
@@ -242,7 +238,8 @@ class ClientController extends Controller
                 $l = mb_substr($letters, rand(0, $lettersCount - 1), 1);
                 $hist[] = $l;
                 $hist[] = $fullName;
-                $fullName = substr_replace($fullName, $l, $p * 2, 2);
+                $fullName = mb_substr($fullName, 0, $p) . $l . mb_substr($fullName, $p + 1);
+                // $fullName = substr_replace($fullName, $l, $p * 2, 2);
                 $hist[] = $fullName;
             }
 
