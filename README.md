@@ -16,7 +16,7 @@
 
 ### Test
 * Fill test data in the DB
-  * Perform POST request to the API `/generateDb` with following data:
+  * Perform POST request to the API `/generateDb` with following payload:
   ```js
   {
     // number of clients to generate
@@ -27,5 +27,8 @@
   }
   ```
   It will return the list of clients, each item contains original existing client and specially generated duplicate.
+  Clients generated in deterministic manner, duplicates are always inserted last, and duplicate the first `intendedDuplicates` clients, so, f.e. if we have 1000 clients and 100 duplicates, duplicates will be at ids 901-1000 and duplicate ids 1-100, so 901 duplicates 1, 902 duplicates 2 and so on.
+  
+  **Note:** this operation clears any clients that were earlier in the DB.  
   
   * Perform POST request to the API `/fuzzyDuplicates`. It will return the list of fuzzy matched clients and time spent for matching. 
