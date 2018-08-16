@@ -1,0 +1,65 @@
+{
+	"info": {
+		"_postman_id": "17f6b37e-f133-4ac1-9093-1e905f80800a",
+		"name": "fuzzy-duplicates",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "generate db",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"clients\": 10000,\n\t\"intendedDuplicates\": 100\n}"
+				},
+				"url": {
+					"raw": "http://localhost:81/generateDb",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "81",
+					"path": [
+						"generateDb"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "fetch duplicates",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"matchThreshold\": 90\n}"
+				},
+				"url": {
+					"raw": "http://localhost:81/fetchDuplicates",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "81",
+					"path": [
+						"fetchDuplicates"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

@@ -48,6 +48,8 @@ class ClientController extends Controller
      * @return \Symfony\Component\HttpFoundation\JsonResponse
      */
     public function generateDb(Request $request){
+        $time_start = microtime(true);
+
         $names = $this->getNames();
         $doctrine = $this->getDoctrine();
 
@@ -58,7 +60,39 @@ class ClientController extends Controller
 
         $result = $this->generateClients($doctrine, $totalCount, $duplicatesCount, $names);
 
-        return $this->json($result);
+        $executionTime = microtime(true) - $time_start;
+
+        return $this->json([
+            'executionTime' => $executionTime,
+            'duplicatePairs' => $result,
+        ]);
+    }
+
+    /**
+     * @Route("/fetchDuplicates", name="fetchDuplicates", methods={"POST"})
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\JsonResponse
+     */
+    public function fetchDuplicates(Request $request){
+        $matchThreshold = $request->get("matchThreshold") ?? 90;
+        $doctrine = $this->getDoctrine();
+        $repo = $doctrine->getRepository(Entity\Client::class);
+
+        $time_start = microtime(true);
+        $repo->setupHashes();
+        $buildHashesTime = microtime(true) - $time_start;
+
+        $time_start = microtime(true);
+        $result = $repo->fetchDuplicatesIds($matchThreshold);
+        $duplicatesSearchTime = microtime(true) - $time_start;
+
+        // $repo->teardownHashes();
+
+        return $this->json([
+            'hashBuildTime' => $buildHashesTime,
+            'duplicatesSearchTime' => $duplicatesSearchTime,
+            'result' => $result
+        ]);
     }
 
     private function getNames(){
@@ -140,18 +174,20 @@ class ClientController extends Controller
         $duplicatedPairs = [];
 
         foreach ($origins as $origin){
-            $clientDuplicate = $this->generateClientDuplicate($origin, $letters, $lettersCount);
+            $isExactDuplicate = rand(1, 100) > 50;
+            $clientDuplicate = $this->generateClientDuplicate($origin, $isExactDuplicate, $letters, $lettersCount);
 
             $em->persist($clientDuplicate);
 
             $duplicatedPairs[] = [
+                'isExactDuplicate' => $isExactDuplicate,
                 'original' => $origin,
                 'duplicate' => $clientDuplicate,
             ];
         }
 
         $em->flush();
-        $em->clear();
+        //$em->clear();
 
         return $duplicatedPairs;
     }
@@ -195,12 +231,12 @@ class ClientController extends Controller
      * @return Entity\Client
      * @throws \Exception
      */
-    private function generateClientDuplicate(Entity\Client $origin, $letters, $lettersCount): Entity\Client
+    private function generateClientDuplicate(Entity\Client $origin, $isExactDuplicate, $letters, $lettersCount): Entity\Client
     {
         $mutationLevel = rand(1, 100);
 
         $passportNumber = intval($origin->getPassportNumber());
-        if ($mutationLevel > 95) {
+        if (!$isExactDuplicate && $mutationLevel > 90) {
             $passportNumber = intval($origin->getPassportNumber()) + pow(rand(1, 9), rand(0, 5));
 
             if ($passportNumber > 999999) {
@@ -209,7 +245,7 @@ class ClientController extends Controller
         }
 
         $passportSeries = intval($origin->getPassportSeries());
-        if ($mutationLevel > 90) {
+        if (!$isExactDuplicate && $mutationLevel > 80) {
             $passportSeries = intval($origin->getPassportSeries()) + pow(rand(1, 9), rand(0, 3));
 
             if ($passportSeries > 9999) {
@@ -217,8 +253,8 @@ class ClientController extends Controller
             }
         }
 
-        $birthDate = $origin->getBirthDate();
-        if ($mutationLevel > 70) {
+        $birthDate = clone $origin->getBirthDate();
+        if (!$isExactDuplicate && $mutationLevel > 60) {
             $dateFactor = rand(1, 3);
 
             switch ($dateFactor) {
@@ -238,39 +274,43 @@ class ClientController extends Controller
                     $intervalSpec = "P1D";
             }
 
-            $birthDate = $origin->getBirthDate()->add(new \DateInterval($intervalSpec));
+            $birthDate->add(new \DateInterval($intervalSpec));
         }
 
         $originalFullName = mb_convert_encoding($origin->getFullName(), "UTF-8");
-        $charsToReplaceCount = rand(1, 3);
-        $nameLength = mb_strlen($originalFullName);
-        $positions = [];
+        $fullName = $originalFullName;
 
-        do {
-            $newPosition = rand(0, $nameLength - 1);
+        if(!$isExactDuplicate){
+            $charsToReplaceCount = rand(1, 3);
+            $nameLength = mb_strlen($originalFullName);
+            $positions = [];
 
-            if (mb_substr($originalFullName, $newPosition, 1) === " ") {
-                continue;
-            }
+            do {
+                $newPosition = rand(0, $nameLength - 1);
 
-            $alreadyHavePosition = false;
+                if (mb_substr($originalFullName, $newPosition, 1) === " ") {
+                    continue;
+                }
+
+                $alreadyHavePosition = false;
+
+                foreach ($positions as $p) {
+                    if ($p === $newPosition) {
+                        $alreadyHavePosition = true;
+                        break;
+                    }
+                }
+
+                if (!$alreadyHavePosition) {
+                    $positions[] = $newPosition;
+                }
+            } while (count($positions) < $charsToReplaceCount);
+
 
             foreach ($positions as $p) {
-                if ($p === $newPosition) {
-                    $alreadyHavePosition = true;
-                    break;
-                }
+                $l = mb_substr($letters, rand(0, $lettersCount - 1), 1);
+                $fullName = mb_substr($fullName, 0, $p) . $l . mb_substr($fullName, $p + 1);
             }
-
-            if (!$alreadyHavePosition) {
-                $positions[] = $newPosition;
-            }
-        } while (count($positions) < $charsToReplaceCount);
-
-        $fullName = $originalFullName;
-        foreach ($positions as $p) {
-            $l = mb_substr($letters, rand(0, $lettersCount - 1), 1);
-            $fullName = mb_substr($fullName, 0, $p) . $l . mb_substr($fullName, $p + 1);
         }
 
         $client = new Entity\Client;

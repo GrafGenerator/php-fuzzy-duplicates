@@ -4,6 +4,7 @@ namespace App\Repository;
 
 use App\Entity\Client;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ParameterType;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
 /**
@@ -38,22 +39,45 @@ class ClientRepository extends ServiceEntityRepository
         return $query->getResult();
     }
 
-    public function createTempTable(){
+    public function setupHashes(){
         $conn = $this->getEntityManager()->getConnection();
 
-        $sql = 'CREATE TEMPORARY TABLE temp11 (id int null); INSERT INTO temp11 SELECT 1;';
-        $stmt = $conn->prepare($sql);
-        $stmt->execute();
+        $createTableSql = '
+            DROP TABLE IF EXISTS hashes;
+            CREATE TABLE hashes(id int not null primary key, hash varchar(640) not null); 
+            INSERT INTO hashes SELECT id, ssdeep_fuzzy_hash(CONCAT(full_name, birth_date, passport_series, passport_number)) FROM client;';
+        $createTableStmt = $conn->prepare($createTableSql);
+        $createTableStmt->execute();
     }
 
-    public function useTempTable(){
+    public function fetchDuplicatesIds($matchThreshold){
         $conn = $this->getEntityManager()->getConnection();
 
-        $sql = 'SELECT * FROM temp11;';
+        $sql = '
+          SELECT 
+            a.id a_id,
+            a.hash a_hash,
+            b.id b_id,
+            b.hash b_hash,
+            ssdeep_fuzzy_compare(a.hash, b.hash) compareResult
+          FROM hashes a 
+          JOIN hashes b 
+          ON b.id > a.id
+          WHERE
+            ssdeep_fuzzy_compare(a.hash, b.hash) > :matchThreshold;';
         $stmt = $conn->prepare($sql);
+        $stmt->bindValue(':matchThreshold', $matchThreshold, ParameterType::INTEGER);
         $stmt->execute();
 
         return $stmt->fetchAll();
+    }
+
+    public function tearDownHashes(){
+        $conn = $this->getEntityManager()->getConnection();
+
+        $dropTableSql = 'DROP TABLE IF EXISTS hashes;';
+        $dropTableStmt = $conn->prepare($dropTableSql);
+        $dropTableStmt->execute();
     }
 
 //    /**
