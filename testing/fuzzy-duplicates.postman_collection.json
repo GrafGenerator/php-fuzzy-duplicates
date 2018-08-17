@@ -17,7 +17,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n\t\"clients\": 10000,\n\t\"intendedDuplicates\": 100\n}"
+					"raw": "{\n\t\"clients\": 10000,\n\t\"intendedDuplicates\": 1000\n}"
 				},
 				"url": {
 					"raw": "http://localhost:81/generateDb",
@@ -34,7 +34,7 @@
 			"response": []
 		},
 		{
-			"name": "fetch duplicates",
+			"name": "fetch duplicates sql",
 			"request": {
 				"method": "POST",
 				"header": [
@@ -48,14 +48,70 @@
 					"raw": "{\n\t\"matchThreshold\": 90\n}"
 				},
 				"url": {
-					"raw": "http://localhost:81/fetchDuplicates",
+					"raw": "http://localhost:81/fetchDuplicatesSql",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
 					"port": "81",
 					"path": [
-						"fetchDuplicates"
+						"fetchDuplicatesSql"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "fetch duplicates php",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"matchThreshold\": 90\n}"
+				},
+				"url": {
+					"raw": "http://localhost:81/fetchDuplicatesPhp",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "81",
+					"path": [
+						"fetchDuplicatesPhp"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "test",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"matchThreshold\": 50\n}"
+				},
+				"url": {
+					"raw": "http://localhost:81/testSql",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "81",
+					"path": [
+						"testSql"
 					]
 				}
 			},

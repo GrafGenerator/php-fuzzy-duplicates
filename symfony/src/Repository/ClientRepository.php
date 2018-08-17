@@ -55,10 +55,8 @@ class ClientRepository extends ServiceEntityRepository
 
         $sql = '
           SELECT 
-            a.id a_id,
-            a.hash a_hash,
-            b.id b_id,
-            b.hash b_hash,
+            a.id id1,
+            b.id id2,
             ssdeep_fuzzy_compare(a.hash, b.hash) compareResult
           FROM hashes a 
           JOIN hashes b 
@@ -78,6 +76,18 @@ class ClientRepository extends ServiceEntityRepository
         $dropTableSql = 'DROP TABLE IF EXISTS hashes;';
         $dropTableStmt = $conn->prepare($dropTableSql);
         $dropTableStmt->execute();
+    }
+
+    public function getHashes(){
+        $conn = $this->getEntityManager()->getConnection();
+
+        $sql = '
+          SELECT id, hash
+          FROM hashes';
+        $stmt = $conn->prepare($sql);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
     }
 
 //    /**

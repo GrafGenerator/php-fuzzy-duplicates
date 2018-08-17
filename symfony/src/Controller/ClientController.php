@@ -36,10 +36,26 @@ class ClientController extends Controller
         $doctrine = $this->getDoctrine();
         $repo = $doctrine->getRepository(Entity\Client::class);
 
-        $repo->createTempTable();
-        $data = $repo->useTempTable();
+        $rawResult = $repo->getHashes();
+        $result = $rawResult;
+        $compResult = [];
 
-        return $this->json($data);
+        $original = array_shift($result)['hash'];
+        foreach ($result as $d){
+            $compareResult = ssdeep_fuzzy_compare($original, $d['hash']);
+
+            $compResult[] = [
+                'compareResult' => $compareResult,
+                'originalHash' => $original,
+                'hashToCompare' => $d
+            ];
+        }
+
+        return $this->json([
+            'count' => sizeof($rawResult),
+            'rawData' => $rawResult,
+            'comparison' => $compResult
+        ]);
     }
 
     /**
@@ -58,25 +74,29 @@ class ClientController extends Controller
         $totalCount = $request->get("clients") ?? 10000000;
         $duplicatesCount = $request->get("intendedDuplicates") ?? 100;
 
-        $result = $this->generateClients($doctrine, $totalCount, $duplicatesCount, $names);
+        list($duplicatedPairs, $exactDuplicatesCount) = $this->generateClients($doctrine, $totalCount, $duplicatesCount, $names);
 
         $executionTime = microtime(true) - $time_start;
 
         return $this->json([
             'executionTime' => $executionTime,
-            'duplicatePairs' => $result,
+            'exactDuplicatesCount' => $exactDuplicatesCount,
+            'duplicatePairs' => $duplicatedPairs,
         ]);
     }
 
     /**
-     * @Route("/fetchDuplicates", name="fetchDuplicates", methods={"POST"})
+     * @Route("/fetchDuplicatesSql", name="fetchDuplicatesSql", methods={"POST"})
      * @param Request $request
      * @return \Symfony\Component\HttpFoundation\JsonResponse
      */
-    public function fetchDuplicates(Request $request){
+    public function fetchDuplicatesSql(Request $request){
         $matchThreshold = $request->get("matchThreshold") ?? 90;
         $doctrine = $this->getDoctrine();
         $repo = $doctrine->getRepository(Entity\Client::class);
+        $statisticsRepo = $doctrine->getRepository(Entity\StatisticsHelper::class);
+
+        list($generatedCount, $generatedDuplicatesCount) = $statisticsRepo->getStatistics();
 
         $time_start = microtime(true);
         $repo->setupHashes();
@@ -86,12 +106,96 @@ class ClientController extends Controller
         $result = $repo->fetchDuplicatesIds($matchThreshold);
         $duplicatesSearchTime = microtime(true) - $time_start;
 
-        // $repo->teardownHashes();
+        $repo->teardownHashes();
+
+        $exactMatchesCount = 0;
+        $intendedMatchesCount = 0;
+
+        foreach ($result as $r){
+            if(intval($r['compareResult']) === 100){
+                ++$exactMatchesCount;
+            }
+
+            $id1 = intval($r['id1']);
+            $id2 = intval($r['id2']);
+
+            if($id1 <= $generatedDuplicatesCount && $id2 > $generatedCount - $generatedDuplicatesCount ||
+                $id2 <= $generatedDuplicatesCount && $id1 > $generatedCount - $generatedDuplicatesCount) {
+                ++$intendedMatchesCount;
+            }
+        }
 
         return $this->json([
             'hashBuildTime' => $buildHashesTime,
             'duplicatesSearchTime' => $duplicatesSearchTime,
+            'duplicatesCount' => sizeof($result),
+            'exactDuplicatesCount' => $exactMatchesCount,
+            'intendedDuplicatesCount' => $intendedMatchesCount,
             'result' => $result
+        ]);
+    }
+
+    /**
+     * @Route("/fetchDuplicatesPhp", name="fetchDuplicatesPhp", methods={"POST"})
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\JsonResponse
+     */
+    public function fetchDuplicatesPhp(Request $request){
+        $matchThreshold = $request->get("matchThreshold") ?? 90;
+        $doctrine = $this->getDoctrine();
+        $repo = $doctrine->getRepository(Entity\Client::class);
+        $statisticsRepo = $doctrine->getRepository(Entity\StatisticsHelper::class);
+
+        list($generatedCount, $generatedDuplicatesCount) = $statisticsRepo->getStatistics();
+
+        $time_start = microtime(true);
+        $repo->setupHashes();
+        $buildHashesTime = microtime(true) - $time_start;
+
+        $time_start = microtime(true);
+        $result = $repo->getHashes();
+        $l = sizeof($result);
+
+        $compareResults = [];
+        $exactMatchesCount = 0;
+        $intendedMatchesCount = 0;
+
+        for($i = 0; $i < $l; ++$i){
+            for($j = $i + 1; $j < $l; ++$j){
+                $cr = ssdeep_fuzzy_compare($result[$i]['hash'], $result[$j]['hash']);
+                if($cr > $matchThreshold){
+                    $id1 = intval($result[$i]['id']);
+                    $id2 = intval($result[$j]['id']);
+
+                    $compareResults[] = [
+                        'id1' => $id1,
+                        'id2' => $id2,
+                        'compareResult' => $cr
+                    ];
+
+                    if($id1 <= $generatedDuplicatesCount && $id2 > $generatedCount - $generatedDuplicatesCount ||
+                        $id2 <= $generatedDuplicatesCount && $id1 > $generatedCount - $generatedDuplicatesCount) {
+                        ++$intendedMatchesCount;
+                    }
+                }
+
+                if($cr === 100){
+                    ++$exactMatchesCount;
+                }
+            }
+        }
+
+        $duplicatesSearchTime = microtime(true) - $time_start;
+
+        $repo->teardownHashes();
+
+        return $this->json([
+            'hashBuildTime' => $buildHashesTime,
+            'duplicatesSearchTime' => $duplicatesSearchTime,
+            'duplicatesCount' => sizeof($compareResults),
+            'exactDuplicatesCount' => $exactMatchesCount,
+            'intendedDuplicatesCount' => $intendedMatchesCount,
+            'result' => $compareResults
         ]);
     }
 
@@ -123,16 +227,21 @@ class ClientController extends Controller
     }
 
     private function clearAllClients(\Doctrine\Common\Persistence\ManagerRegistry $doctrine){
-        $repo = $doctrine->getRepository(Entity\Client::class);
+        $clientRepo = $doctrine->getRepository(Entity\Client::class);
+        $statisticsRepo = $doctrine->getRepository(Entity\StatisticsHelper::class);
 
-        $repo->clearClients();
+        $clientRepo->clearClients();
+        $statisticsRepo->clearStatistics();
     }
 
-    private function generateClients(\Doctrine\Common\Persistence\ManagerRegistry $doctrine, int $totalCount, int $duplicatesCount, array $names)
+    private function generateClients(\Doctrine\Common\Persistence\ManagerRegistry $doctrine, int $totalCount, int $duplicatesCount, array $names) : array
     {
         $em = $doctrine->getManager();
+        $statisticsRepo = $doctrine->getRepository(Entity\StatisticsHelper::class);
 
         $em->getConnection()->getConfiguration()->setSQLLogger(null);
+
+        $statisticsRepo->setStatistics($totalCount, $duplicatesCount);
 
         $fairCount = $totalCount - $duplicatesCount;
         $startBirthDate = DateTime::createFromFormat('d/m/Y', '1/1/1971');
@@ -141,12 +250,12 @@ class ClientController extends Controller
         // generate new clients in batch
         $batchSize = 500;
 
-        for ($i = 0; $i < $fairCount; $i++){
-            $clientDuplicate = $this->generateNewClient($names, $startBirthDate, $endBirthDate);
+        for ($i = 0; $i < $fairCount; ++$i){
+            $client = $this->generateNewClient($names, $startBirthDate, $endBirthDate);
 
-            $em->persist($clientDuplicate);
+            $em->persist($client);
 
-            $tempRecords[] = $clientDuplicate;
+            $tempRecords[] = $client;
 
             if (($i % $batchSize) === 0) {
                 $em->flush();
@@ -172,12 +281,17 @@ class ClientController extends Controller
         $origins = $repo->getFirstN($duplicatesCount);
 
         $duplicatedPairs = [];
+        $exactDuplicatesCount = 0;
 
-        foreach ($origins as $origin){
+        foreach ($origins as $origin) {
             $isExactDuplicate = rand(1, 100) > 50;
             $clientDuplicate = $this->generateClientDuplicate($origin, $isExactDuplicate, $letters, $lettersCount);
 
             $em->persist($clientDuplicate);
+
+            if($isExactDuplicate){
+                ++$exactDuplicatesCount;
+            }
 
             $duplicatedPairs[] = [
                 'isExactDuplicate' => $isExactDuplicate,
@@ -189,7 +303,7 @@ class ClientController extends Controller
         $em->flush();
         //$em->clear();
 
-        return $duplicatedPairs;
+        return array($duplicatedPairs, $exactDuplicatesCount);
     }
 
     private function randomDateInRange(DateTime $start, DateTime $end) {

@@ -19,3 +19,39 @@ join client a
   on a.id = t.a_id
 join client b
   on b.id = t.b_id;
+
+
+
+--
+
+SELECT
+  a.id a_id,
+  a.hash a_hash,
+  b.id b_id,
+  b.hash b_hash,
+  ssdeep_fuzzy_compare(a.hash, b.hash) compareResult
+FROM hashes a
+CROSS JOIN hashes b
+ON b.id > a.id
+WHERE
+  ssdeep_fuzzy_compare(a.hash, b.hash) > 80;
+
+
+SELECT
+  a.id a_id,
+  a.hash a_hash,
+  b.id b_id,
+  b.hash b_hash,
+  ssdeep_fuzzy_compare(a.hash, b.hash) compareResult
+FROM hashes a
+CROSS JOIN hashes b
+where
+  a.id = 1
+  and
+  b.id in (select id from hashes where id > a.id)
+  and
+  ssdeep_fuzzy_compare(a.hash, b.hash) > 90;
+
+
+
+SELECT a.hash a_hash, b.hash b_hash, ssdeep_fuzzy_compare(a.hash, b.hash) compareResult FROM (select * from hashes where id in (996, 997)) a CROSS JOIN (select * from hashes) b;
