@@ -4,6 +4,7 @@
 * PHP 7.2 ( with php7.2-xml and php-mysql) & composer
 * docker & docker-compose
 * git
+* wget (to run automatic testing) 
 
 ### Running
 * `git clone https://github.com/GrafGenerator/php-fuzzy-duplicates.git`

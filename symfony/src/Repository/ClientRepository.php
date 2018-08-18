@@ -44,8 +44,13 @@ class ClientRepository extends ServiceEntityRepository
 
         $createTableSql = '
             DROP TABLE IF EXISTS hashes;
-            CREATE TABLE hashes(id int not null primary key, hash varchar(640) not null); 
-            INSERT INTO hashes SELECT id, ssdeep_fuzzy_hash(CONCAT(full_name, birth_date, passport_series, passport_number)) FROM client;';
+            CREATE TABLE hashes(id int not null primary key, hash varchar(640) not null, significantLength int not null); 
+            INSERT INTO hashes 
+            SELECT 
+              id,
+              ssdeep_fuzzy_hash(CONCAT(full_name, birth_date, passport_series, passport_number)),
+              LENGTH(full_name)
+            FROM client;';
         $createTableStmt = $conn->prepare($createTableSql);
         $createTableStmt->execute();
     }
@@ -60,7 +65,10 @@ class ClientRepository extends ServiceEntityRepository
             ssdeep_fuzzy_compare(a.hash, b.hash) compareResult
           FROM hashes a 
           JOIN hashes b 
-          ON b.id > a.id
+          ON 
+            b.id > a.id
+            AND 
+            ABS(a.significantLength - b.significantLength) < 2
           WHERE
             ssdeep_fuzzy_compare(a.hash, b.hash) > :matchThreshold;';
         $stmt = $conn->prepare($sql);
@@ -82,7 +90,7 @@ class ClientRepository extends ServiceEntityRepository
         $conn = $this->getEntityManager()->getConnection();
 
         $sql = '
-          SELECT id, hash
+          SELECT id, hash, significantLength
           FROM hashes';
         $stmt = $conn->prepare($sql);
         $stmt->execute();

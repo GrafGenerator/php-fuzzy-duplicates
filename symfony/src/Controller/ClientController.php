@@ -162,6 +162,12 @@ class ClientController extends Controller
 
         for($i = 0; $i < $l; ++$i){
             for($j = $i + 1; $j < $l; ++$j){
+                // heuristic here, if total name length differ for more than one symbol, most probably there are different persons
+                // this should allow typos like 'danil' vs 'daniil', but reject any major changes
+                if(abs(intval($result[$i]['significantLength']) - intval($result[$j]['significantLength'])) > 1) {
+                    continue;
+                }
+
                 $cr = ssdeep_fuzzy_compare($result[$i]['hash'], $result[$j]['hash']);
                 if($cr > $matchThreshold){
                     $id1 = intval($result[$i]['id']);
