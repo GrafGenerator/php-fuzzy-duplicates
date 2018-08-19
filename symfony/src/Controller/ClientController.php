@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use DateTime;
+use Doctrine\DBAL\FetchMode;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
@@ -93,6 +94,12 @@ class ClientController extends Controller
     public function fetchDuplicatesSql(Request $request){
         $matchThreshold = $request->get("matchThreshold") ?? 90;
         $doctrine = $this->getDoctrine();
+
+        $doctrine->getManager()->getConnection()->getConfiguration()->setSQLLogger(null);
+
+        gc_enable();
+        gc_collect_cycles();
+
         $repo = $doctrine->getRepository(Entity\Client::class);
         $statisticsRepo = $doctrine->getRepository(Entity\StatisticsHelper::class);
 
@@ -125,6 +132,9 @@ class ClientController extends Controller
             }
         }
 
+        gc_enable();
+        gc_collect_cycles();
+
         return $this->json([
             'hashBuildTime' => $buildHashesTime,
             'duplicatesSearchTime' => $duplicatesSearchTime,
@@ -143,6 +153,12 @@ class ClientController extends Controller
     public function fetchDuplicatesPhp(Request $request){
         $matchThreshold = $request->get("matchThreshold") ?? 90;
         $doctrine = $this->getDoctrine();
+
+        $doctrine->getManager()->getConnection()->getConfiguration()->setSQLLogger(null);
+
+        gc_enable();
+        gc_collect_cycles();
+
         $repo = $doctrine->getRepository(Entity\Client::class);
         $statisticsRepo = $doctrine->getRepository(Entity\StatisticsHelper::class);
 
@@ -153,47 +169,54 @@ class ClientController extends Controller
         $buildHashesTime = microtime(true) - $time_start;
 
         $time_start = microtime(true);
-        $result = $repo->getHashes();
-        $l = sizeof($result);
+        $result = $repo->getHashesToCompareIterable();
 
         $compareResults = [];
         $exactMatchesCount = 0;
         $intendedMatchesCount = 0;
 
-        for($i = 0; $i < $l; ++$i){
-            for($j = $i + 1; $j < $l; ++$j){
-                // heuristic here, if total name length differ for more than one symbol, most probably there are different persons
-                // this should allow typos like 'danil' vs 'daniil', but reject any major changes
-                if(abs(intval($result[$i]['significantLength']) - intval($result[$j]['significantLength'])) > 1) {
-                    continue;
+        $batchSize = 500;
+        $current = 0;
+
+        while($r = $result->fetch()){
+            $cr = ssdeep_fuzzy_compare("$r->getHash1()", "$r    ->getHash2()");
+            if($cr > $matchThreshold){
+                $id1 = intval($r->getId1());
+                $id2 = intval($r->getId2());
+
+                $compareResults[] = [
+                    'id1' => $id1,
+                    'id2' => $id2,
+                    'compareResult' => $cr
+                ];
+
+                if($id1 <= $generatedDuplicatesCount && $id2 > $generatedCount - $generatedDuplicatesCount ||
+                    $id2 <= $generatedDuplicatesCount && $id1 > $generatedCount - $generatedDuplicatesCount) {
+                    ++$intendedMatchesCount;
                 }
+            }
 
-                $cr = ssdeep_fuzzy_compare($result[$i]['hash'], $result[$j]['hash']);
-                if($cr > $matchThreshold){
-                    $id1 = intval($result[$i]['id']);
-                    $id2 = intval($result[$j]['id']);
+            if($cr === 100){
+                ++$exactMatchesCount;
+            }
 
-                    $compareResults[] = [
-                        'id1' => $id1,
-                        'id2' => $id2,
-                        'compareResult' => $cr
-                    ];
+            $tempObjects[] = $r;
+            $current++;
 
-                    if($id1 <= $generatedDuplicatesCount && $id2 > $generatedCount - $generatedDuplicatesCount ||
-                        $id2 <= $generatedDuplicatesCount && $id1 > $generatedCount - $generatedDuplicatesCount) {
-                        ++$intendedMatchesCount;
-                    }
-                }
+            if((current % $batchSize) === 0){
+                $tempObjects = null;
 
-                if($cr === 100){
-                    ++$exactMatchesCount;
-                }
+                gc_enable();
+                gc_collect_cycles();
             }
         }
 
         $duplicatesSearchTime = microtime(true) - $time_start;
 
         $repo->teardownHashes();
+
+        gc_enable();
+        gc_collect_cycles();
 
         return $this->json([
             'hashBuildTime' => $buildHashesTime,

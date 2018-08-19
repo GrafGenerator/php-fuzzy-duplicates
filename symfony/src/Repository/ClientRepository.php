@@ -3,8 +3,11 @@
 namespace App\Repository;
 
 use App\Entity\Client;
+use App\Models\ComparisonDto;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\FetchMode;
 use Doctrine\DBAL\ParameterType;
+use Doctrine\DBAL\Statement;
 use Symfony\Bridge\Doctrine\RegistryInterface;
 
 /**
@@ -86,16 +89,50 @@ class ClientRepository extends ServiceEntityRepository
         $dropTableStmt->execute();
     }
 
-    public function getHashes(){
+    public function getHashesToCompare(){
         $conn = $this->getEntityManager()->getConnection();
 
         $sql = '
-          SELECT id, hash, significantLength
-          FROM hashes';
+          SELECT 
+            a.id id1,
+            b.id id2,
+            a.hash hash1,
+            b.hash hash2
+          FROM hashes a 
+          JOIN hashes b 
+          ON 
+            b.id > a.id
+            AND 
+            ABS(a.significantLength - b.significantLength) < 2';
         $stmt = $conn->prepare($sql);
+        $stmt->
         $stmt->execute();
 
         return $stmt->fetchAll();
+
+        $query = $em->createQuery('SELECT NEW CustomerDTO(c.name, e.email, a.city) FROM Customer c JOIN c.email e JOIN c.address a');
+        $users = $query->getResult(); // array of CustomerDTO
+    }
+
+    /**
+     * @return \PDOStatement
+     */
+    public function getHashesToCompareIterable() : \PDOStatement {
+        $conn = $this->getEntityManager()->getConnection();
+        $queryBuilder = $conn->createQueryBuilder();
+
+        $query = $queryBuilder
+            ->select("a.id id1", "a.hash hash1", "b.id id2", "b.hash hash2")
+            ->from("hashes", "a")
+            ->join("a", "hashes", "b", "b.id > a.id")
+            ->join("a", "client", "c1", "c1.id = a.id")
+            ->join("b", "client", "c2", "c2.id = b.id")
+            ->where("ABS(a.significantLength - b.significantLength) < 2")
+            ->andWhere("c1.birth_date = c2.birth_date");
+
+        $stmt = $query->execute();
+        $stmt->setFetchMode(FetchMode::CUSTOM_OBJECT, 'ComparisonDto');
+        return $stmt;
     }
 
 //    /**

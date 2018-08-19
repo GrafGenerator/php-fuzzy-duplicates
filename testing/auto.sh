@@ -12,7 +12,7 @@ wget --quiet \
       --output-document "./results/generate-warm-up.json" \
       - http://localhost:81/generateDb
 
-for (( c = 100; c <= 1000000; c*= 10 ))
+for (( c = 100000; c <= 1000000; c*= 10 ))
 do
     d=1000
 
@@ -33,7 +33,7 @@ do
 
     for m in 25 50 75 90
     do
-        if (( (c <= 10000) || (c = 100000) && (m = 50) ))
+        if (( c <= 10000))
         then
             echo "$c clients ($d duplicates), test SQL with threshold $m"
             # sql
