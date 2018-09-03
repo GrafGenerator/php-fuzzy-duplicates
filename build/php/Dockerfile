@@ -4,6 +4,7 @@ ENV TZ=Asia/Novosibirsk
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN apt-get update && apt-get install -my \
+  iproute2 \
   curl \
   wget \
   php-curl \
@@ -35,6 +36,10 @@ RUN php composer-setup.php
 RUN php -r "unlink('composer-setup.php');"
 RUN mv composer.phar /usr/local/bin/composer
 RUN chmod +x /usr/local/bin/composer
+
+COPY ext/xdebug.sh /tmp/xdebug.sh
+RUN chmod +x /tmp/xdebug.sh
+RUN /tmp/xdebug.sh
 
 COPY ext/ssdeep.sh /tmp/ssdeep.sh
 RUN chmod +x /tmp/ssdeep.sh

@@ -1,4 +1,4 @@
 index:
-    path: /test
+    path: /
     controller: App\Controller\ClientController::index
 

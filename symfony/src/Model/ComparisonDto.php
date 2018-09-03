@@ -6,7 +6,7 @@
  * Time: 23:44
  */
 
-namespace App\Models;
+namespace App\Model;
 
 
 class ComparisonDto

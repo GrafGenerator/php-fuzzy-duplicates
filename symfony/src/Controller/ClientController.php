@@ -2,6 +2,9 @@
 
 namespace App\Controller;
 
+use App\Abstractions\OperationsProcessing\OperationHandlersFactoryInterface;
+use App\Model\Operations\Command\TestOperationCommand;
+use App\Operations\Common\IdentityRegistry;
 use DateTime;
 use Doctrine\DBAL\FetchMode;
 use Symfony\Component\Finder\Finder;
@@ -17,46 +20,37 @@ class ClientController extends Controller
      * @var LoggerInterface
      */
     private $logger;
+    /**
+     * @var OperationHandlersFactoryInterface
+     */
+    private $handlersFactory;
 
-    public function __construct(LoggerInterface $logger)
+    public function __construct(
+        LoggerInterface $logger,
+        OperationHandlersFactoryInterface $handlersFactory
+    )
     {
         $this->logger = $logger;
+        $this->handlersFactory = $handlersFactory;
     }
 
-    /**
-     * @Route("/test", name="test")
-     */
     public function index()
     {
     }
 
     /**
-     * @Route("/testSql", name="testSql", methods={"GET"})
+     * @Route("/test", name="test", methods={"GET"})
      */
-    public function testSql(){
-        $doctrine = $this->getDoctrine();
-        $repo = $doctrine->getRepository(Entity\Client::class);
+    public function test(){
+        $handler = $this->handlersFactory->get(IdentityRegistry::getRegistry()->getTest());
+        $command = new TestOperationCommand(123);
 
-        $rawResult = $repo->getHashes();
-        $result = $rawResult;
-        $compResult = [];
+        $result = $handler->handle($command);
 
-        $original = array_shift($result)['hash'];
-        foreach ($result as $d){
-            $compareResult = ssdeep_fuzzy_compare($original, $d['hash']);
+        $serializer = $this->get("serializer");
+        $response = $serializer->serialize($result, "json");
 
-            $compResult[] = [
-                'compareResult' => $compareResult,
-                'originalHash' => $original,
-                'hashToCompare' => $d
-            ];
-        }
-
-        return $this->json([
-            'count' => sizeof($rawResult),
-            'rawData' => $rawResult,
-            'comparison' => $compResult
-        ]);
+        return new Response($response);
     }
 
     /**

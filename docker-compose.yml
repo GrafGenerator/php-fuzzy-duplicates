@@ -9,6 +9,8 @@ services:
     volumes:
     - ./symfony:/var/www/html/symfony:cached
     - ./logs:/var/log
+    environment:
+      XDEBUG_CONFIG: remote_host=172.17.0.1
   web:
     build: build/nginx
     restart: always

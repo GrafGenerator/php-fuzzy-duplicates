@@ -3,7 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Client;
-use App\Models\ComparisonDto;
+use App\Model\ComparisonDto;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\FetchMode;
 use Doctrine\DBAL\ParameterType;
