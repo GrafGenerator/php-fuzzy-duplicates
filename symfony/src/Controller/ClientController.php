@@ -9,6 +9,7 @@ use DateTime;
 use Doctrine\DBAL\FetchMode;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Psr\Log\LoggerInterface;
@@ -36,6 +37,7 @@ class ClientController extends Controller
 
     public function index()
     {
+        return phpinfo();
     }
 
     /**
@@ -47,7 +49,7 @@ class ClientController extends Controller
 
         $result = $handler->handle($command);
 
-        $serializer = $this->get("serializer");
+        $serializer = $this->get("jms_serializer");
         $response = $serializer->serialize($result, "json");
 
         return new Response($response);
