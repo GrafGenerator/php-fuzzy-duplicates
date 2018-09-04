@@ -40,10 +40,17 @@ class GenericOperationHandlerResult implements OperationResultInterface
         return $this->result;
     }
 
+    /**
+     * @param $result
+     * @return GenericOperationHandlerResult
+     */
     public static function ok($result) {
         return new GenericOperationHandlerResult(true, $result);
     }
 
+    /**
+     * @return GenericOperationHandlerResult
+     */
     public static function fail() {
         return new GenericOperationHandlerResult(false, null);
     }

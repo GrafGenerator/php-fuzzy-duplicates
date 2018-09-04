@@ -11,5 +11,10 @@ namespace App\Abstractions\OperationsProcessing;
 
 interface OperationHandlerInterface
 {
+    /**
+     * @return HandlerIdentity
+     */
+    public function getIdentity();
+
     public function handle(OperationCommandInterface $command) : OperationResultInterface;
 }

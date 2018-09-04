@@ -16,12 +16,14 @@ use App\Abstractions\OperationsProcessing\OperationCommandInterface;
 use App\Abstractions\OperationsProcessing\OperationHandlerInterface;
 use App\Abstractions\OperationsProcessing\OperationResultInterface;
 use App\Abstractions\OperationsProcessing\OperationScopeFactoryInterface;
-use App\Entity\Client;
+use App\Entity\StatisticsHelper;
 use App\Model\Operations\Command\TestOperationCommand;
+use App\Model\Operations\Command\UpdateStatisticsOperationCommand;
+use App\Model\Operations\Common\EmptyOperationResult;
 use App\Model\Operations\Result\TestOperationResult;
 use App\Operations\Common\IdentityRegistry;
 
-final class TestOperationHandler implements OperationHandlerInterface
+final class UpdateStatisticsOperationHandler implements OperationHandlerInterface
 {
 
     /**
@@ -46,18 +48,28 @@ final class TestOperationHandler implements OperationHandlerInterface
     {
         $scope = $this->scopeFactory->for($this->getIdentity());
 
-        $repo = $scope->getRepo(Client::class);
-
-        $this->sqlExecutor->execute("");
-
-        /* @var TestOperationCommand $cmd */
+        /* @var UpdateStatisticsOperationCommand $cmd */
         $cmd = $command;
 
-        $result = new TestOperationResult($cmd->getValue());
+        // clear existing statistics
+        $this->sqlExecutor->execute("TRUNCATE TABLE statistics_helper");
+
+        $repo = $scope->getDefaultRepo();
+
+        $clientsCountStatistics = new StatisticsHelper();
+        $clientsCountStatistics->setName('total');
+        $clientsCountStatistics->setValue($cmd->getTotalCount());
+
+        $duplicatesCountStatistics = new StatisticsHelper;
+        $duplicatesCountStatistics->setName('duplicates');
+        $duplicatesCountStatistics->setValue($cmd->getDuplicatesCount());
+
+        $repo->add($clientsCountStatistics);
+        $repo->add($duplicatesCountStatistics);
 
         $scope->complete();
 
-        return GenericOperationHandlerResult::ok($result);
+        return GenericOperationHandlerResult::ok(EmptyOperationResult::create());
     }
 
     /**
@@ -65,6 +77,6 @@ final class TestOperationHandler implements OperationHandlerInterface
      */
     public function getIdentity()
     {
-        return IdentityRegistry::getRegistry()->getTest();
+        return IdentityRegistry::getRegistry()->getUpdateStatistics();
     }
 }

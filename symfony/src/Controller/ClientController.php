@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Abstractions\OperationsProcessing\OperationHandlersFactoryInterface;
 use App\Model\Operations\Command\TestOperationCommand;
+use App\Model\Operations\Command\UpdateStatisticsOperationCommand;
 use App\Operations\Common\IdentityRegistry;
 use DateTime;
 use Doctrine\DBAL\FetchMode;
@@ -44,6 +45,15 @@ class ClientController extends Controller
      * @Route("/test", name="test", methods={"GET"})
      */
     public function test(){
+        $handler = $this->handlersFactory->get(IdentityRegistry::getRegistry()->getUpdateStatistics());
+        $command = new UpdateStatisticsOperationCommand(333, 111);
+
+        $result = $handler->handle($command);
+
+        $serializer = $this->get("jms_serializer");
+        $response = $serializer->serialize($result, "json");
+
+        /*
         $handler = $this->handlersFactory->get(IdentityRegistry::getRegistry()->getTest());
         $command = new TestOperationCommand(123);
 
@@ -51,6 +61,7 @@ class ClientController extends Controller
 
         $serializer = $this->get("jms_serializer");
         $response = $serializer->serialize($result, "json");
+        */
 
         return new Response($response);
     }

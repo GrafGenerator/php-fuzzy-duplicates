@@ -29,11 +29,26 @@ services:
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
 
+
+    # === Operations processing ===
     App\OperationsProcessing\OperationHandlersFactory: ~
 
     App\Abstractions\OperationsProcessing\OperationHandlerServiceLocatorInterface: '@App\OperationsProcessing\OperationHandlersFactory'
     App\Abstractions\OperationsProcessing\OperationHandlersFactoryInterface: '@App\OperationsProcessing\OperationHandlersFactory'
 
+    App\OperationsProcessing\OperationScope: ~
+    App\Abstractions\OperationsProcessing\OperationScopeInterface: '@App\OperationsProcessing\OperationScope'
+
+    App\OperationsProcessing\OperationScopeFactory: ~
+    App\Abstractions\OperationsProcessing\OperationScopeFactoryInterface: '@App\OperationsProcessing\OperationScopeFactory'
+
+
+    # === Cqrs implementation ===
+    App\Cqrs\SqlExecutor: ~
+    App\Abstractions\Cqrs\SqlExecutorInterface: '@App\Cqrs\SqlExecutor'
+
+
+    # === Concreate operation handlers ===
     App\Operations\:
         resource: '../src/Operations/*'
         exclude: '../src/Operations/{Common}'
