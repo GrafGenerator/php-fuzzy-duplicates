@@ -16,12 +16,14 @@ use App\Abstractions\OperationsProcessing\OperationCommandInterface;
 use App\Abstractions\OperationsProcessing\OperationHandlerInterface;
 use App\Abstractions\OperationsProcessing\OperationResultInterface;
 use App\Abstractions\OperationsProcessing\OperationScopeFactoryInterface;
+use App\Abstractions\Services\ResetStatisticsServiceInterface;
 use App\Entity\StatisticsHelper;
 use App\Model\Operations\Command\TestOperationCommand;
-use App\Model\Operations\Command\UpdateStatisticsOperationCommand;
+use App\Model\Operations\Command\GenerateDbOperationCommand;
 use App\Model\Operations\Common\EmptyOperationResult;
 use App\Model\Operations\Result\TestOperationResult;
 use App\Operations\Common\IdentityRegistry;
+use App\Services\ResetStatisticsService;
 
 final class UpdateStatisticsOperationHandler implements OperationHandlerInterface
 {
@@ -34,25 +36,30 @@ final class UpdateStatisticsOperationHandler implements OperationHandlerInterfac
      * @var SqlExecutorInterface
      */
     private $sqlExecutor;
+    /**
+     * @var ResetStatisticsServiceInterface
+     */
+    private $resetStatisticsService;
 
     public function __construct(
         OperationScopeFactoryInterface $scopeFactory,
-        SqlExecutorInterface $sqlExecutor
+        SqlExecutorInterface $sqlExecutor,
+        ResetStatisticsServiceInterface $resetStatisticsService
     )
     {
         $this->scopeFactory = $scopeFactory;
         $this->sqlExecutor = $sqlExecutor;
+        $this->resetStatisticsService = $resetStatisticsService;
     }
 
     public function handle(OperationCommandInterface $command): OperationResultInterface
     {
         $scope = $this->scopeFactory->for($this->getIdentity());
 
-        /* @var UpdateStatisticsOperationCommand $cmd */
+        /* @var GenerateDbOperationCommand $cmd */
         $cmd = $command;
 
-        // clear existing statistics
-        $this->sqlExecutor->execute("TRUNCATE TABLE statistics_helper");
+        $this->resetStatisticsService->reset();
 
         $repo = $scope->getDefaultRepo();
 

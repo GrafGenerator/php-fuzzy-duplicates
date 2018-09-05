@@ -30,5 +30,13 @@ interface OperationScopeInterface
      */
     public function getDefaultRepo();
 
+    /**
+     * Final scope completion, includes commit
+     */
     public function complete(): void;
+
+    /**
+     * Intermediate scope commit
+     */
+    public function commit(): void;
 }

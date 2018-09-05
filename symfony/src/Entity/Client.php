@@ -3,11 +3,12 @@
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use JsonSerializable;
 
 /**
- * @ORM\Entity(repositoryClass="App\Repository\ClientRepository")
+ * @ORM\Entity()
  */
-class Client implements \JsonSerializable
+class Client implements JsonSerializable
 {
     /**
      * @ORM\Id()

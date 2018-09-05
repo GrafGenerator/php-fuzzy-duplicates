@@ -17,12 +17,18 @@ class TestOperationResult
     public $value;
 
     /**
+     * @var float
+     */
+    public $timeSpent;
+
+    /**
      * TestOperationResult constructor.
      * @param int $value
      */
-    public function __construct(int $value)
+    public function __construct(int $value, float $timeSpent)
     {
         $this->value = $value;
+        $this->timeSpent = $timeSpent;
     }
 
 

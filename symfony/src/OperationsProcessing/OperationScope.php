@@ -37,6 +37,8 @@ class OperationScope implements OperationScopeInterface
         $this->managerRegistry = $managerRegistry;
         $this->handlerIdentity = $handlerIdentity;
         $this->managers = array();
+
+        $this->managerRegistry->getConnection()->getConfiguration()->setSQLLogger(null);
     }
 
     /**
@@ -77,10 +79,8 @@ class OperationScope implements OperationScopeInterface
 
     public function complete(): void
     {
-        /* @var ObjectManager $manager */
-        foreach ($this->managers as $manager){
-            $manager->flush();
-        }
+        $this->commit();
+        // do another completion routines here
     }
 
     /**
@@ -95,10 +95,21 @@ class OperationScope implements OperationScopeInterface
             $objectManager = $this->managers[$entityClass];
         }
         else {
-            $objectManager = $this->managerRegistry->getEntityManagerForClass($entityClass);
+            $objectManager = $this->managerRegistry->getManagerForClass($entityClass);
             $this->managers[$entityClass] = $objectManager;
         }
 
         return new EntityRepository($objectManager);
+    }
+
+    /**
+     * Intermediate scope commit
+     */
+    public function commit(): void
+    {
+        /* @var ObjectManager $manager */
+        foreach ($this->managers as $manager){
+            $manager->flush();
+        }
     }
 }

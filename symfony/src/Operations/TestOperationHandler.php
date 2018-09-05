@@ -17,12 +17,14 @@ use App\Abstractions\OperationsProcessing\OperationHandlerInterface;
 use App\Abstractions\OperationsProcessing\OperationResultInterface;
 use App\Abstractions\OperationsProcessing\OperationScopeFactoryInterface;
 use App\Entity\Client;
+use App\Helpers\TrackedOperationTrait;
 use App\Model\Operations\Command\TestOperationCommand;
 use App\Model\Operations\Result\TestOperationResult;
 use App\Operations\Common\IdentityRegistry;
 
 final class TestOperationHandler implements OperationHandlerInterface
 {
+    use TrackedOperationTrait;
 
     /**
      * @var OperationScopeFactoryInterface
@@ -44,16 +46,17 @@ final class TestOperationHandler implements OperationHandlerInterface
 
     public function handle(OperationCommandInterface $command): OperationResultInterface
     {
+        $this->startTracking();
+
         $scope = $this->scopeFactory->for($this->getIdentity());
 
         $repo = $scope->getRepo(Client::class);
 
-        $this->sqlExecutor->execute("");
-
         /* @var TestOperationCommand $cmd */
         $cmd = $command;
 
-        $result = new TestOperationResult($cmd->getValue());
+        $elapsedTime = $this->getElapsedTime();
+        $result = new TestOperationResult($cmd->getValue(), $elapsedTime);
 
         $scope->complete();
 

@@ -18,7 +18,7 @@ services:
     # this creates a service per class whose id is the fully-qualified class name
     App\:
         resource: '../src/*'
-        exclude: '../src/{Abstractions,Data,DependencyInjection,Entity,Migrations,Model,Tests,Kernel.php}'
+        exclude: '../src/{Abstractions,Cqrs,Data,DependencyInjection,Entity,Migrations,Model,Tests,Kernel.php}'
 
     # controllers are imported separately to make sure services can be injected
     # as action arguments even if you don't extend any base controller class
@@ -47,9 +47,44 @@ services:
     App\Cqrs\SqlExecutor: ~
     App\Abstractions\Cqrs\SqlExecutorInterface: '@App\Cqrs\SqlExecutor'
 
+    App\Cqrs\EntityReadersFactory: ~
+    App\Abstractions\Cqrs\EntityReadersFactoryInterface: '@App\Cqrs\EntityReadersFactory'
 
-    # === Concreate operation handlers ===
+    #   = readers auto =
+    App\Cqrs\Readers\:
+        resource: '../src/Cqrs/Readers/*'
+
+    #   = readers interfaces =
+    App\Abstractions\Readers\ClientReaderInterface: '@App\Cqrs\Readers\ClientReader'
+    App\Abstractions\Readers\StatisticsHelperReaderInterface: '@App\Cqrs\Readers\StatisticsHelperReader'
+
+
+    # === BL services ===
+
+    #   = auto =
+    App\Services\:
+        resource: '../src/Services/*'
+
+    #   = interfaces =
+    App\Abstractions\Services\CleanupDbServiceInterface: '@App\Services\CleanupDbService'
+    App\Abstractions\Services\GenerateClientDuplicateServiceInterface: '@App\Services\GenerateClientDuplicateService'
+    App\Abstractions\Services\GenerateClientServiceInterface: '@App\Services\GenerateClientService'
+    App\Abstractions\Services\GetNamesServiceInterface: '@App\Services\GetNamesService'
+    App\Abstractions\Services\RandomDateServiceInterface: '@App\Services\RandomDateService'
+    App\Abstractions\Services\ResetStatisticsServiceInterface: '@App\Services\ResetStatisticsService'
+    App\Abstractions\Services\SsdeepHashesDbServiceInterface: '@App\Services\SsdeepHashesDbService'
+
+
+
+    # === Concrete operation handlers ===
     App\Operations\:
         resource: '../src/Operations/*'
         exclude: '../src/Operations/{Common}'
         tags: ['app.operation_handler']
+
+    # === Complex models ===
+    App\Abstractions\Api\AbstractApiRequest: ~
+    App\Model\Api\:
+        resource: '../src/Model/Api/*'
+        calls:
+            - [setRequestStack, ['@request_stack']]
