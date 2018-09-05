@@ -25,6 +25,10 @@ trait JmsJsonTrait
     protected function jmsJson($result) {
         $serializer = $this->container->get("jms_serializer");
         $response = $serializer->serialize($result, "json");
-        return new Response($response);
+
+        $jsonResponse = new Response($response, Response::HTTP_OK);
+        $jsonResponse->headers->set("Content-Type", "application/json");
+
+        return $jsonResponse;
     }
 }

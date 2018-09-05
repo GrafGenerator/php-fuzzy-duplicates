@@ -48,9 +48,8 @@ final class EntityRepository implements EntityRepositoryInterface
      * Very bad code here due to need to clear EntityManager to improve performance.
      * This should be done in another way, but left for now.
      * TODO: refactor this to avoid such method in repo. Probably specialized repo type will suit well.
-     * @param $entity
      */
-    public function clearManager($entity): void
+    public function clearManager(): void
     {
         $this->manager->clear();
     }

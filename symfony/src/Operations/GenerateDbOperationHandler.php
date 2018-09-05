@@ -167,7 +167,7 @@ final class GenerateDbOperationHandler implements OperationHandlerInterface
         }
 
         $scope->commit();
-        $repo->clear();
+        $repo->clearManager();
     }
 
     /**
