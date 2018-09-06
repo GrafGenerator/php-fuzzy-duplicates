@@ -5,6 +5,7 @@ namespace App\Cqrs\Readers;
 use App\Abstractions\Cqrs\EntityReadersFactoryInterface;
 use App\Abstractions\Readers\ClientReaderInterface;
 use App\Entity\Client;
+use App\Model\ComparisonDto;
 use Doctrine\DBAL\FetchMode;
 use Doctrine\DBAL\ParameterType;
 
@@ -99,7 +100,7 @@ class ClientReader implements ClientReaderInterface
             ->andWhere("c1.birth_date = c2.birth_date");
 
         $stmt = $query->execute();
-        $stmt->setFetchMode(FetchMode::CUSTOM_OBJECT, 'ComparisonDto');
+        $stmt->setFetchMode(FetchMode::CUSTOM_OBJECT, ComparisonDto::class);
         return $stmt;
     }
 }

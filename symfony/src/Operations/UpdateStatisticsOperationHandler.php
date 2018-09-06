@@ -18,12 +18,9 @@ use App\Abstractions\OperationsProcessing\OperationResultInterface;
 use App\Abstractions\OperationsProcessing\OperationScopeFactoryInterface;
 use App\Abstractions\Services\ResetStatisticsServiceInterface;
 use App\Entity\StatisticsHelper;
-use App\Model\Operations\Command\TestOperationCommand;
 use App\Model\Operations\Command\GenerateDbOperationCommand;
 use App\Model\Operations\Common\EmptyOperationResult;
-use App\Model\Operations\Result\TestOperationResult;
 use App\Operations\Common\IdentityRegistry;
-use App\Services\ResetStatisticsService;
 
 final class UpdateStatisticsOperationHandler implements OperationHandlerInterface
 {

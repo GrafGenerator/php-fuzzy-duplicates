@@ -24,14 +24,10 @@ use App\Abstractions\Services\GenerateClientDuplicateServiceInterface;
 use App\Abstractions\Services\GenerateClientServiceInterface;
 use App\Abstractions\Services\GetNamesServiceInterface;
 use App\Entity\Client;
-use App\Entity\StatisticsHelper;
 use App\Helpers\TrackedOperationTrait;
-use App\Model\Operations\Command\TestOperationCommand;
 use App\Model\Operations\Command\GenerateDbOperationCommand;
 use App\Model\Operations\Command\UpdateStatisticsOperationCommand;
-use App\Model\Operations\Common\EmptyOperationResult;
 use App\Model\Operations\Result\GenerateDbOperationResult;
-use App\Model\Operations\Result\TestOperationResult;
 use App\Operations\Common\IdentityRegistry;
 
 final class GenerateDbOperationHandler implements OperationHandlerInterface
