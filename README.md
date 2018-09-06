@@ -1,6 +1,6 @@
 ## Exploring the project
 ### Prerequisites
-* Ubunta 18.04
+* Ubuntu 18.04
 * PHP 7.2 ( with php7.2-xml and php-mysql) & composer
 * docker & docker-compose
 * git
